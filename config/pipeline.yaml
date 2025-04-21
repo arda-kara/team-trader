@@ -1,0 +1,212 @@
+"""
+Pipeline configuration file for the AI-Augmented Full-Stack Algorithmic Trading Pipeline.
+This file defines the configuration for all components and their integration.
+"""
+
+# General configuration
+general:
+  environment: development  # development, staging, production
+  log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  data_dir: /home/ubuntu/trading_pipeline/data
+
+# Component-specific configuration
+components:
+  data_ingestion:
+    enabled: true
+    host: localhost
+    port: 8001
+    api_prefix: /api/v1
+    polling_interval: 60  # seconds
+    sources:
+      - alpaca
+      - yahoo_finance
+      - newsapi
+      - fred
+    cache_expiry: 3600  # seconds
+    batch_size: 100
+    max_retries: 3
+    retry_delay: 5  # seconds
+    timeout: 30  # seconds
+
+  semantic_signal:
+    enabled: true
+    host: localhost
+    port: 8002
+    api_prefix: /api/v1
+    processing_interval: 300  # seconds
+    llm_provider: openai
+    llm_model: gpt-4
+    embedding_model: text-embedding-3-large
+    sentiment_threshold: 0.6
+    entity_confidence: 0.7
+    max_tokens: 4096
+    temperature: 0.2
+    cache_results: true
+    cache_expiry: 86400  # seconds (1 day)
+
+  strategy_generator:
+    enabled: true
+    host: localhost
+    port: 8003
+    api_prefix: /api/v1
+    optimization_interval: 3600  # seconds (1 hour)
+    backtest_lookback: 365  # days
+    strategy_types:
+      - trend_following
+      - mean_reversion
+      - breakout
+      - momentum
+      - sentiment_based
+      - event_driven
+      - ml_based
+    optimization_methods:
+      - grid_search
+      - random_search
+      - bayesian
+      - genetic
+    max_strategies: 10
+    min_sharpe_ratio: 1.0
+    max_drawdown: 0.2
+    min_win_rate: 0.55
+
+  execution_engine:
+    enabled: true
+    host: localhost
+    port: 8004
+    api_prefix: /api/v1
+    simulation_mode: true  # true for paper trading, false for live trading
+    broker: alpaca  # alpaca, interactive_brokers, simulation
+    order_types:
+      - market
+      - limit
+      - stop
+      - stop_limit
+    position_sizing: risk_based  # fixed, percentage, risk_based, kelly
+    risk_per_trade: 0.01  # 1% of portfolio per trade
+    max_positions: 20
+    execution_algorithms:
+      - twap
+      - vwap
+      - iceberg
+      - smart_routing
+    slippage_model: proportional  # none, fixed, proportional, market_impact
+    slippage_factor: 0.0005  # 5 basis points
+
+  risk_management:
+    enabled: true
+    host: localhost
+    port: 8005
+    api_prefix: /api/v1
+    risk_check_interval: 60  # seconds
+    max_portfolio_var: 0.02  # 2% daily VaR
+    max_position_size: 0.1  # 10% of portfolio
+    max_sector_exposure: 0.3  # 30% of portfolio
+    max_asset_correlation: 0.7
+    stop_loss_pct: 0.05  # 5% stop loss
+    trailing_stop_pct: 0.03  # 3% trailing stop
+    portfolio_optimization: mean_variance  # mean_variance, risk_parity, min_variance, max_sharpe
+    rebalance_threshold: 0.1  # 10% deviation triggers rebalance
+    drawdown_protection: true
+    max_drawdown_threshold: 0.15  # 15% max drawdown before reducing exposure
+    stress_test_scenarios:
+      - market_crash
+      - sector_rotation
+      - volatility_spike
+      - liquidity_crisis
+
+  agentic_oversight:
+    enabled: true
+    host: localhost
+    port: 8006
+    api_prefix: /api/v1
+    monitoring_interval: 60  # seconds
+    agent_types:
+      - monitoring
+      - decision
+      - explanation
+      - learning
+      - human_interface
+    llm_provider: openai
+    llm_model: gpt-4
+    memory_retention: 30  # days
+    reasoning_frameworks:
+      - react
+      - cot
+      - tot
+    confidence_threshold: 0.8
+    human_approval_required: true
+    anomaly_detection_sensitivity: 0.7
+    learning_rate: 0.01
+    max_concurrent_tasks: 5
+
+  dashboard:
+    enabled: true
+    host: localhost
+    port: 8000
+    api_prefix: /api
+    refresh_interval: 5  # seconds
+    chart_animation: true
+    theme: light
+    default_timeframe: 1d  # 1m, 5m, 15m, 1h, 4h, 1d, 1w, 1M
+    default_chart_type: candlestick  # line, candlestick, ohlc, area
+    max_data_points: 1000
+    enable_notifications: true
+    notification_duration: 5  # seconds
+    websocket_enabled: true
+
+# Integration configuration
+integration:
+  startup_sequence:
+    - data_ingestion
+    - semantic_signal
+    - strategy_generator
+    - risk_management
+    - execution_engine
+    - agentic_oversight
+    - dashboard
+  shutdown_sequence:
+    - execution_engine
+    - strategy_generator
+    - risk_management
+    - semantic_signal
+    - data_ingestion
+    - agentic_oversight
+    - dashboard
+  health_check_interval: 30  # seconds
+  restart_attempts: 3
+  restart_delay: 5  # seconds
+  message_timeout: 10  # seconds
+  max_queue_size: 1000
+  data_flow:
+    - source: data_ingestion
+      target: semantic_signal
+      data_types: [market_data, news, economic_indicators]
+    - source: data_ingestion
+      target: strategy_generator
+      data_types: [market_data, economic_indicators]
+    - source: semantic_signal
+      target: strategy_generator
+      data_types: [sentiment_signals, entity_events, causal_relationships]
+    - source: strategy_generator
+      target: risk_management
+      data_types: [strategies, signals, allocations]
+    - source: risk_management
+      target: execution_engine
+      data_types: [approved_strategies, position_limits, risk_constraints]
+    - source: execution_engine
+      target: risk_management
+      data_types: [positions, executions, orders]
+    - source: agentic_oversight
+      target: strategy_generator
+      data_types: [strategy_adjustments, anomaly_reports]
+    - source: agentic_oversight
+      target: risk_management
+      data_types: [risk_adjustments, exposure_recommendations]
+    - source: agentic_oversight
+      target: execution_engine
+      data_types: [execution_approvals, trading_pauses]
+  error_handling:
+    max_errors_before_shutdown: 10
+    critical_components: [execution_engine, risk_management]
+    error_notification_channels: [log, email, dashboard]
+    automatic_recovery: true

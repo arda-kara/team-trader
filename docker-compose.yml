@@ -1,0 +1,306 @@
+version: '3.8'
+
+services:
+  # Data Ingestion Layer
+  data_ingestion:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trading_pipeline/data_ingestion:latest
+    container_name: data_ingestion
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - COMPONENT_NAME=data_ingestion
+      - HOST=0.0.0.0
+      - PORT=8001
+      - LOG_LEVEL=INFO
+      - ALPACA_API_KEY=${ALPACA_API_KEY}
+      - ALPACA_API_SECRET=${ALPACA_API_SECRET}
+      - NEWSAPI_API_KEY=${NEWSAPI_API_KEY}
+      - FRED_API_KEY=${FRED_API_KEY}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+    command: python -m data_ingestion.main --host 0.0.0.0 --port 8001
+
+  # Semantic Signal Generator
+  semantic_signal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trading_pipeline/semantic_signal:latest
+    container_name: semantic_signal
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      - COMPONENT_NAME=semantic_signal
+      - HOST=0.0.0.0
+      - PORT=8002
+      - LOG_LEVEL=INFO
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+      - data_ingestion
+    command: python -m semantic_signal.api.main --host 0.0.0.0 --port 8002
+
+  # Strategy Generator & Optimizer
+  strategy_generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trading_pipeline/strategy_generator:latest
+    container_name: strategy_generator
+    restart: unless-stopped
+    ports:
+      - "8003:8003"
+    environment:
+      - COMPONENT_NAME=strategy_generator
+      - HOST=0.0.0.0
+      - PORT=8003
+      - LOG_LEVEL=INFO
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+      - data_ingestion
+      - semantic_signal
+    command: python -m strategy_generator.api.main --host 0.0.0.0 --port 8003
+
+  # Execution Engine
+  execution_engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trading_pipeline/execution_engine:latest
+    container_name: execution_engine
+    restart: unless-stopped
+    ports:
+      - "8004:8004"
+    environment:
+      - COMPONENT_NAME=execution_engine
+      - HOST=0.0.0.0
+      - PORT=8004
+      - LOG_LEVEL=INFO
+      - ALPACA_API_KEY=${ALPACA_API_KEY}
+      - ALPACA_API_SECRET=${ALPACA_API_SECRET}
+      - SIMULATION_MODE=true
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+      - strategy_generator
+    command: python -m execution_engine.api.main --host 0.0.0.0 --port 8004
+
+  # Risk Management System
+  risk_management:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trading_pipeline/risk_management:latest
+    container_name: risk_management
+    restart: unless-stopped
+    ports:
+      - "8005:8005"
+    environment:
+      - COMPONENT_NAME=risk_management
+      - HOST=0.0.0.0
+      - PORT=8005
+      - LOG_LEVEL=INFO
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+      - execution_engine
+    command: python -m risk_management.api.main --host 0.0.0.0 --port 8005
+
+  # Agentic Oversight System
+  agentic_oversight:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trading_pipeline/agentic_oversight:latest
+    container_name: agentic_oversight
+    restart: unless-stopped
+    ports:
+      - "8006:8006"
+    environment:
+      - COMPONENT_NAME=agentic_oversight
+      - HOST=0.0.0.0
+      - PORT=8006
+      - LOG_LEVEL=INFO
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+      - data_ingestion
+      - semantic_signal
+      - strategy_generator
+      - execution_engine
+      - risk_management
+    command: python -m agentic_oversight.api.main --host 0.0.0.0 --port 8006
+
+  # Dashboard Interface
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    image: trading_pipeline/dashboard:latest
+    container_name: dashboard
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - COMPONENT_NAME=dashboard
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=INFO
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+      - data_ingestion
+      - semantic_signal
+      - strategy_generator
+      - execution_engine
+      - risk_management
+      - agentic_oversight
+    command: python -m dashboard.api.main --host 0.0.0.0 --port 8000
+
+  # Pipeline Integrator
+  integrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trading_pipeline/integrator:latest
+    container_name: integrator
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=INFO
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+    depends_on:
+      - postgres
+      - redis
+      - data_ingestion
+      - semantic_signal
+      - strategy_generator
+      - execution_engine
+      - risk_management
+      - agentic_oversight
+      - dashboard
+    command: python integrator.py
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14
+    container_name: postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Redis Cache
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
