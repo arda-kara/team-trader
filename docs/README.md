@@ -1,6 +1,6 @@
 # AI-Augmented Full-Stack Algorithmic Trading Pipeline
 
-## Overview
+## Overview (Project under development under QuantLab repository, TBA)
 
 This document provides comprehensive documentation for the AI-Augmented Full-Stack Algorithmic Trading Pipeline. The system combines traditional algorithmic trading approaches with advanced AI capabilities, including semantic analysis and agentic intelligence, to create a powerful and flexible trading platform.
 
